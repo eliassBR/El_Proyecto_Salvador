@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<CodeBlocks_project_file>
+	<FileVersion major="1" minor="6" />
+	<Project>
+		<Option title="El_Proyecto_Salvador" />
+		<Option pch_mode="2" />
+		<Option compiler="gcc" />
+		<Build>
+			<Target title="Debug">
+				<Option output="bin/Debug/El_Proyecto_Salvador" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj/Debug/" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-g" />
+					<Add directory="SFML/include" />
+				</Compiler>
+				<Linker>
+					<Add library="SFML/lib/libsfml-window.a" />
+					<Add library="SFML/lib/libsfml-system.a" />
+					<Add library="SFML/lib/libsfml-graphics.a" />
+					<Add directory="SFML /lib" />
+				</Linker>
+			</Target>
+			<Target title="Release">
+				<Option output="bin/Release/El_Proyecto_Salvador" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj/Release/" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-O2" />
+				</Compiler>
+				<Linker>
+					<Add option="-s" />
+				</Linker>
+			</Target>
+		</Build>
+		<Compiler>
+			<Add option="-Wall" />
+			<Add option="-fexceptions" />
+		</Compiler>
+		<Unit filename="MENU.cpp" />
+		<Unit filename="MENU.h" />
+		<Unit filename="fecha.cpp" />
+		<Unit filename="fecha.h" />
+		<Unit filename="juegoManager.cpp" />
+		<Unit filename="juegoManager.h" />
+		<Unit filename="main.cpp" />
+		<Unit filename="material.cpp" />
+		<Unit filename="material.h" />
+		<Unit filename="materialArchivo.cpp" />
+		<Unit filename="materialArchivo.h" />
+		<Unit filename="mision.cpp" />
+		<Unit filename="mision.h" />
+		<Unit filename="misionArchivo.cpp" />
+		<Unit filename="misionArchivo.h" />
+		<Unit filename="partida.cpp" />
+		<Unit filename="partida.h" />
+		<Unit filename="partidaArchivo.cpp" />
+		<Unit filename="partidaArchivo.h" />
+		<Unit filename="personaje.cpp" />
+		<Unit filename="personaje.h" />
+		<Extensions />
+	</Project>
+</CodeBlocks_project_file>
