@@ -1,0 +1,10 @@
+# Lo genera el compilador en cada build
+obj/
+*.exe
+
+# Archivos que Code::Blocks reescribe solo
+*.depend
+*.layout
+
+# SFML pesa más de 300 MB: cada uno la copia a mano
+SFML/
