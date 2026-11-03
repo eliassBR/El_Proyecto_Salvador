@@ -6,5 +6,12 @@ obj/
 *.depend
 *.layout
 
-# SFML pesa más de 300 MB: cada uno la copia a mano
-SFML/
+# SFML: solo subimos lo necesario para compilar
+SFML/*
+!SFML/include/
+!SFML/license.md
+!SFML/lib/
+SFML/lib/*
+!SFML/lib/libsfml-graphics.a
+!SFML/lib/libsfml-window.a
+!SFML/lib/libsfml-system.a
