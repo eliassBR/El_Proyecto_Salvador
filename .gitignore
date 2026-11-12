@@ -1,5 +1,6 @@
 # Lo genera el compilador en cada build
-obj/
+# La / de adelante evita que ignore assets/images/obj
+/obj/
 *.exe
 
 # Archivos que Code::Blocks reescribe solo
