@@ -1,59 +1,53 @@
 #include "partida.h"
 #include <iostream>
 
-// Constructor de Partida.
+/*-----------------------------------------------------
+                    CONSTRUCTOR
+-----------------------------------------------------*/
+
 Partida::Partida(sf::RenderWindow& ventana, TipoMapa tipoMapa)
     : _ventana(ventana),
-      _spriteFondo(_texturaFondo),
       _personaje1(_ventana),
-      _auto(
-          "assets/images/obj/autoGarageEditado.png",
-          TipoMapa::GARAGE,
-          {1000.f, 250.f},
-          true
-      ),
+      _spriteFondo(_texturaFondo),
       _mapaActual(TipoMapa::NINGUNO),
       _puertaTocada(TipoMapa::NINGUNO),
       _bloqueoPuerta(false),
       _puertaDormitorio(
-          {1126.f, 144.f},  //pos
-          {110.f, 390.f}    //tam
+          {1126.f, 144.f},
+          {110.f, 390.f}
       ),
       _puertaLivingDormitorio(
-          {46.f, 155.f},  //pos
-          {86.f, 372.f}   //tam
+          {46.f, 155.f},
+          {86.f, 372.f}
       ),
       _puertaLivingGarage(
-          {1149.f, 155.f},  //pos
-          {92.f, 379.f}     //tam
+          {1149.f, 155.f},
+          {92.f, 379.f}
       ),
       _puertaGarage(
-          {63.f, 67.f},     //pos
-          {193.f, 500.f}    //tam
+          {63.f, 67.f},
+          {193.f, 500.f}
       )
 {
-    // Carga el mapa que se recibe como parámetro.
     cargarMapa(tipoMapa);
+
     if (_mapaActual == TipoMapa::HABITACION)
     {
-        _personaje1.colocarPies(300.f, 550.f);
+        _personaje1.colocarPies(100.f, 550.f);
     }
 }
 
-// Devuelve el sprite del auto para poder consultar su posición.
-sf::Sprite Partida::getposicion_auto() const
-{
-    return _auto.getposicion();
-}
+
+/*-----------------------------------------------------
+            SISTEMA DE MAPAS Y COLISIONES
+-----------------------------------------------------*/
 
 // Carga las imágenes correspondientes al mapa indicado.
-// También carga su imagen de colisiones, que determina dónde puede caminar el personaje.
 void Partida::cargarMapa(TipoMapa tipoMapa)
 {
     std::string fondo;
     std::string colision;
 
-    // Según el mapa recibido, se seleccionan sus archivos correspondientes.
     switch (tipoMapa)
     {
     case TipoMapa::HABITACION:
@@ -76,31 +70,34 @@ void Partida::cargarMapa(TipoMapa tipoMapa)
         return;
     }
 
-    // Se carga la imagen de fondo. Si ocurre un error, se informa y se interrumpe.
+    // Carga la imagen de fondo.
     if (!_texturaFondo.loadFromFile(fondo))
     {
         std::cout << "Error al cargar: " << fondo << '\n';
         return;
     }
-    // Se carga la imagen que contiene las zonas transitables y las paredes.
+
+    // Carga la imagen de colisiones.
     if (!_fondoColision.loadFromFile(colision))
     {
         std::cout << "Error al cargar: " << colision << '\n';
         return;
     }
 
-    // Solo se actualiza el mapa actual cuando ambas imágenes se cargaron correctamente.
+    // Actualiza el mapa actual.
     _mapaActual = tipoMapa;
     _spriteFondo.setTexture(_texturaFondo, true);
+
+    // Carga los objetos correspondientes al nuevo mapa.
+    _mapaCatalogo.cargarObjetos(tipoMapa);
 }
 
-// Comprueba si una coordenada corresponde a una puerta del mapa actual.
-// Si encuentra una, guarda cuál es el mapa al que permite acceder.
+
+// Comprueba si una coordenada corresponde a una puerta.
 bool Partida::dentroDePuerta(float x, float y) const
 {
     const sf::Vector2f punto{x, y};
 
-    // Se revisan las puertas según el mapa en el que se encuentra el personaje.
     switch (_mapaActual)
     {
     case TipoMapa::HABITACION:
@@ -110,6 +107,7 @@ bool Partida::dentroDePuerta(float x, float y) const
             return true;
         }
         break;
+
     case TipoMapa::LIVING:
         if (_puertaLivingDormitorio.contains(punto))
         {
@@ -123,6 +121,7 @@ bool Partida::dentroDePuerta(float x, float y) const
             return true;
         }
         break;
+
     case TipoMapa::GARAGE:
         if (_puertaGarage.contains(punto))
         {
@@ -138,127 +137,153 @@ bool Partida::dentroDePuerta(float x, float y) const
     return false;
 }
 
-// Verifica si una coordenada del mapa representa una pared.
-// Devuelve true si hay colisión y false si el personaje puede pasar.
+
+// Verifica si una coordenada representa una pared.
 bool Partida::verificarColision(float x, float y) const
 {
     const auto tamano = _fondoColision.getSize();
 
-    // Si la coordenada está fuera de los límites de la imagen,     se considera una colisión para impedir que el personaje salga del mapa.
     if (x < 0.f || y < 0.f ||
         x >= tamano.x || y >= tamano.y)
     {
         return true;
     }
 
-    // Primero se detectan las cajas de las puertas.       La puerta es transitable aunque tenga píxeles negros en la imagen de colisiones.
     if (dentroDePuerta(x, y))
     {
         return false;
     }
 
-    // Se obtiene el color del píxel correspondiente a la posición consultada.
     const sf::Color color = _fondoColision.getPixel({
         static_cast<unsigned int>(x),
         static_cast<unsigned int>(y)
     });
 
-    // Negro: pared, por lo tanto no se puede avanzar.
     if (color == sf::Color::Black)
     {
         return true;
     }
 
-    // Los demás colores, incluido el verde, representan zonas transitables.
     return false;
 }
 
-// Comprueba si el personaje está tocando el auto.  // Solo considera la colisión cuando el auto está habilitado y se encuentra en el mismo mapa que el personaje.
-bool Partida::colisionConMaterial1(const sf::Sprite& pos_personaje, const sf::Sprite& pos_objeto) const
+/*------------------------*/
+
+// Comprueba si el personaje colisiona con algún objeto del catálogo.
+bool Partida::colisionConMaterial1(
+    const sf::Sprite& pos_personaje,
+    const sf::Sprite& pos_objeto
+) const
 {
-    if (!_auto.esColisionable() || _auto.getMapaAsignado() != _mapaActual)
+    // El segundo parámetro se conserva por compatibilidad
+    // con las llamadas anteriores, pero ya no necesitamos un objeto individual.
+    (void)pos_objeto;
+
+    // Recorremos todos los objetos del mapa actual.
+    for (const auto& objeto : _mapaCatalogo.getColisionables())
     {
-        return false;
+        if (pos_personaje.getGlobalBounds()
+                .findIntersection(objeto->getBounds()).has_value())
+        {
+            return true;
+        }
     }
 
-    // Compara los rectángulos que ocupan el personaje y el objeto.     // Si se superponen, existe una colisión.
-    return pos_personaje.getGlobalBounds().findIntersection(pos_objeto.getGlobalBounds()).has_value();
+    return false;
 }
 
-// Determina en qué coordenadas debe aparecer el personaje cuando pasa de un mapa a otro.   // Las posiciones dependen tanto del mapa de destino como del de origen.
-sf::Vector2f Partida::posicionDeAparicion(TipoMapa destino, TipoMapa origen) const
+bool Partida::colisionConObjetos(const sf::FloatRect& caja) const
 {
-    // Dormitorio -> Living.
+    for (const auto& objeto : _mapaCatalogo.getColisionables())
+    {
+        if (caja.findIntersection(objeto->getBounds()).has_value())
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+/*-----------------------------------------------------
+                  SISTEMA DE PUERTAS
+-----------------------------------------------------*/
+
+// Determina dónde aparece el personaje al cambiar de mapa.
+sf::Vector2f Partida::posicionDeAparicion(
+    TipoMapa destino,
+    TipoMapa origen
+) const
+{
     if (origen == TipoMapa::HABITACION &&
         destino == TipoMapa::LIVING)
     {
         return {250.f, 560.f};
     }
 
-    // Garage -> Living.
     if (origen == TipoMapa::GARAGE &&
         destino == TipoMapa::LIVING)
     {
         return {980.f, 560.f};
     }
 
-    // Living -> Dormitorio.
     if (origen == TipoMapa::LIVING &&
         destino == TipoMapa::HABITACION)
     {
-        return {980.f, 560.f};
+        return {960.f, 560.f};
     }
 
-    // Living -> Garage.
     if (origen == TipoMapa::LIVING &&
         destino == TipoMapa::GARAGE)
     {
-        return {400.f, 560.f};
+        return {200.f, 600.f};
     }
 
-    // Posición predeterminada si no coincide ninguna combinación.
     return {300.f, 550.f};
 }
 
-// Realiza el cambio de escenario.  // Guarda el mapa de origen, carga el destino y coloca al personaje en la posición de aparición correspondiente.
+
+// Realiza el cambio de escenario.
 void Partida::cambiarMapa(TipoMapa destino)
 {
     const TipoMapa origen = _mapaActual;
 
     cargarMapa(destino);
 
-    // Si el mapa no se pudo cargar, no se modifica la posición del personaje.
+    std::cout << "Mapa después del cambio: "
+              << static_cast<int>(_mapaActual) << '\n';
+
     if (_mapaActual != destino)
     {
         return;
     }
 
-    // Se calcula la posición de aparición según los mapas involucrados.
-    const sf::Vector2f aparicion = posicionDeAparicion(destino, origen);
+    const sf::Vector2f aparicion =
+        posicionDeAparicion(destino, origen);
 
     _personaje1.colocarPies(aparicion.x, aparicion.y);
 
-    // Evita que el personaje vuelva a activar la puerta inmediatamente después de aparecer en el nuevo mapa.
     _bloqueoPuerta = true;
 }
 
-// Actualiza el estado de la partida.   // Controla el movimiento del personaje y determina si debe cambiar de mapa.
+
+/*-----------------------------------------------------
+                ACTUALIZACIÓN Y DIBUJO
+-----------------------------------------------------*/
+
+// Actualiza el estado de la partida.
 void Partida::actualizar(float dt)
 {
     (void)dt;
 
-    // Se reinicia la puerta detectada antes de procesar el movimiento.
     _puertaTocada = TipoMapa::NINGUNO;
 
-    // Actualiza el movimiento del personaje y verifica las colisiones.
     _personaje1.caminar(*this);
 
-    // Si el personaje ya no está tocando una puerta    // se permite detectar una nueva.
     if (_puertaTocada == TipoMapa::NINGUNO)
     {
         _bloqueoPuerta = false;
     }
-    // Si hay una puerta detectada y no está bloqueada  // se realiza el cambio al mapa correspondiente.
     else if (!_bloqueoPuerta &&
              _puertaTocada != _mapaActual)
     {
@@ -266,9 +291,22 @@ void Partida::actualizar(float dt)
     }
 }
 
+
+// Dibuja los elementos de la partida.
 void Partida::dibujar()
 {
     _ventana.draw(_spriteFondo);
-    _auto.dibujar(_ventana, _mapaActual);
+
+    // Dibuja todos los objetos del catálogo.
+    for (const auto& objeto : _mapaCatalogo.getColisionables())
+    {
+        if (const auto* objetoMapa =
+                dynamic_cast<const ObjetoMapa*>(objeto.get()))
+        {
+            objetoMapa->draw(_ventana);
+        }
+    }
+
+    // Dibuja al personaje.
     _personaje1.dibujar();
 }

@@ -1,54 +1,68 @@
-#include "material.h"
 #include "partida.h"
+#include "material.h"
 #include <iostream>
 
-Material::Material(
-    const std::string& ruta,
-    TipoMapa mapaAsignado,
-    sf::Vector2f posicion,
-    bool colisionable
-)
-    : _textura(),
-      _sprite(_textura),
-      _mapaAsignado(mapaAsignado),
-      _colisionable(colisionable)
-{
-    if (!_textura.loadFromFile(ruta))
-    {
-        std::cout << "No se pudo cargar el material: "
-                  << ruta << '\n';
-    }
+/*-----------------------------------------------------
+                    CLASE HIJA: MapaObjeto
+-----------------------------------------------------*/
 
-    _sprite.setTexture(_textura);
-    _sprite.setPosition(posicion);
+ObjetoMapa::ObjetoMapa(const sf::Texture& texture, sf::Vector2f position)
+    : _sprite(texture),
+      // Por defecto, la caja es toda la textura.
+      _cajaColision(sf::FloatRect({0.f, 0.f}, sf::Vector2f(texture.getSize())))
+{
+    // La textura ya se asignó arriba gracias al constructor de inicialización (:).
+    // Ahora solo acomodamos su posición en el mundo.
+    _sprite.setPosition(position);
 }
 
-void Material::dibujar(
-    sf::RenderWindow& ventana,
-    TipoMapa mapaActual
-)
+/*
+ObjetoMapa::ObjetoMapa(const sf::Texture& texture, sf::Vector2f position, sf::FloatRect localCollisionBox)
+    : _sprite(texture)
 {
-    // El objeto solo aparece en su mapa asignado.
-    if (_mapaAsignado == mapaActual)
-        ventana.draw(_sprite);
+    // La textura ya se asignó arriba gracias al constructor de inicialización (:).
+    // Ahora solo acomodamos su posición en el mundo.
+    _sprite.setPosition(position);
+
+    // Calculamos la caja de colisión absoluta en el mundo sumando la posición del objeto
+    _cajaColision = sf::FloatRect(
+        sf::Vector2f(position.x + localCollisionBox.position.x, position.y + localCollisionBox.position.y),
+        localCollisionBox.size
+    );
+}
+*/
+
+sf::FloatRect ObjetoMapa::getBounds() const
+{
+    const sf::Vector2f pos = _sprite.getPosition();
+    const sf::Vector2f esc = _sprite.getScale();
+
+    return sf::FloatRect(
+        {pos.x + _cajaColision.position.x * esc.x,
+         pos.y + _cajaColision.position.y * esc.y},
+        {_cajaColision.size.x * esc.x,
+         _cajaColision.size.y * esc.y}
+    );
 }
 
-sf::Sprite Material::getposicion() const
+void ObjetoMapa::setScale(sf::Vector2f escala)
 {
-    return _sprite;
+    _sprite.setScale(escala);
 }
 
-sf::FloatRect Material::getBounds() const
+void ObjetoMapa::setCajaColision(sf::FloatRect cajaLocal)
 {
-    return _sprite.getGlobalBounds();
+    _cajaColision = cajaLocal;
 }
 
-bool Material::esColisionable() const
+/*
+sf::FloatRect ObjetoMapa::getBounds() const
 {
-    return _colisionable;
+    return _cajaColision;
 }
+*/
 
-TipoMapa Material::getMapaAsignado() const
+void ObjetoMapa::draw(sf::RenderWindow& window) const
 {
-    return _mapaAsignado;
+    window.draw(_sprite); // Corregido: mSprite cambiado por tu variable real '_sprite'
 }

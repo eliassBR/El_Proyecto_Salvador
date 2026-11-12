@@ -43,9 +43,13 @@
 		<Unit filename="MENU.h" />
 		<Unit filename="fecha.cpp" />
 		<Unit filename="fecha.h" />
+		<Unit filename="inventario.cpp" />
+		<Unit filename="inventario.h" />
 		<Unit filename="juegoManager.cpp" />
 		<Unit filename="juegoManager.h" />
 		<Unit filename="main.cpp" />
+		<Unit filename="mapa.cpp" />
+		<Unit filename="mapa.h" />
 		<Unit filename="material.cpp" />
 		<Unit filename="material.h" />
 		<Unit filename="materialArchivo.cpp" />

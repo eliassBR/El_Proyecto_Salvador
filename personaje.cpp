@@ -1,13 +1,18 @@
 #include "personaje.h"
 #include "partida.h"
-#include "material.h"
 #include <iostream>
+
+
+/*-----------------------------------------------------
+                    CONSTRUCTOR
+-----------------------------------------------------*/
 
 Personaje::Personaje(sf::RenderWindow& ventana)
     : _ventana(ventana),
       _textura("assets/images/sprites/spriteP1caminando.png"),
       _sprite(_textura),
       _velocidad(200.f),
+      _vida(100),
       _fila(0),
       _columna(0),
       _frameActual(0),
@@ -19,12 +24,22 @@ Personaje::Personaje(sf::RenderWindow& ventana)
       _limiteIzq(50.f),
       _limiteDer(1000.f),
       _limiteArriba(100.f),
-      _limiteAbajo(500.f)
+      _limiteAbajo(500.f),
+      _inventario(ventana)
 {
-    _sprite.setTextureRect(sf::IntRect({_columna*_ancho,_fila*_alto}, {_ancho,_alto}));
+    _sprite.setTextureRect(sf::IntRect(
+        {_columna * _ancho, _fila * _alto},
+        {_ancho, _alto}
+    ));
+
     _sprite.setPosition({400.f, 200.f});
     _sprite.setScale({0.64f, 0.96f});
 }
+
+
+/*-----------------------------------------------------
+                         MOVIMIENTO
+-----------------------------------------------------*/
 
 void Personaje::setLimites(float izq, float der, float arriba, float abajo)
 {
@@ -34,15 +49,15 @@ void Personaje::setLimites(float izq, float der, float arriba, float abajo)
     _limiteAbajo = abajo;
 }
 
-void Personaje::setFila(int fila)
-{
-    _fila = fila;
-}
 
 void Personaje::colocarPies(float x, float y)
 {
-    _sprite.setPosition({x - (_ancho * _sprite.getScale().x) / 2.f, y - (_alto * _sprite.getScale().y)});
+    _sprite.setPosition({
+        x - (_ancho * _sprite.getScale().x) / 2.f,
+        y - (_alto * _sprite.getScale().y)
+    });
 }
+
 
 bool Personaje::puedePisar(float x, float y, const Partida& partida) const
 {
@@ -57,7 +72,8 @@ bool Personaje::puedePisar(float x, float y, const Partida& partida) const
     float derecha = x + PIES_DER * escalaX;
     float piesY = y + PIES_Y * escalaY;
 
-    // Se revisa un punto cada 10 píxeles a lo largo de los pies
+
+    // Comprobación de colisiones con las paredes.
     for (float px = izquierda; px < derecha; px += 10.f)
     {
         if (partida.verificarColision(px, piesY))
@@ -66,12 +82,45 @@ bool Personaje::puedePisar(float x, float y, const Partida& partida) const
         }
     }
 
-    return !partida.verificarColision(derecha, piesY);
+        if (partida.verificarColision(derecha, piesY))
+    {
+        return false;
+    }
+
+
+    /*
+    // Comprobación de colisiones con los objetos del catálogo.
+    sf::Sprite spritePersonaje = _sprite;
+    spritePersonaje.setPosition({x, y});
+
+    if (partida.colisionConMaterial1(spritePersonaje, spritePersonaje))
+    {
+        return false;
+    }
+    */
+
+
+    // Comprobación de colisiones con los objetos del catálogo (solo los pies).
+    // Se arma una caja fina en los pies del personaje y se compara solo esa.
+    const float ALTO_PIES = 10.f;
+
+    sf::FloatRect cajaPies(
+        {izquierda, piesY - ALTO_PIES},
+        {derecha - izquierda, ALTO_PIES}
+    );
+
+    if (partida.colisionConObjetos(cajaPies))
+    {
+        return false;
+    }
+
+    return true;
+
 }
+
 
 void Personaje::caminar(const Partida& partida)
 {
-    sf::Vector2f posicionAnterior = _sprite.getPosition();
     static sf::Clock relojInterno;
     float dt = relojInterno.restart().asSeconds();
 
@@ -80,66 +129,94 @@ void Personaje::caminar(const Partida& partida)
         dt = 0.05f;
     }
 
-    // MANDATORIO: Creamos dx y dy acá arriba para que las líneas 182 y 186 funcionen
+
+    // El inventario se actualiza siempre, para poder abrirlo y cerrarlo.
+    _inventario.actualizar();
+
+
+    // Con el inventario abierto, el personaje no se mueve.
+    if (_inventario.estaAbierto())
+    {
+        _frameActual = 0;
+        _contador = 0.f;
+        _columna = 0;
+
+        _sprite.setTextureRect(sf::IntRect(
+            {_columna * _ancho, _fila * _alto},
+            {_ancho, _alto}
+        ));
+
+        return;
+    }
+
+
+    // Variables de movimiento.
     float dx = 0.f;
     float dy = 0.f;
     bool enMovimiento = false;
 
 
-    // ARRIBA: Tecla W o Flecha Arriba
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Up))
+    // Movimiento hacia arriba.
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W) ||
+        sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Up))
     {
         dy = -_velocidad * dt;
         _fila = 1;
         enMovimiento = true;
     }
-    // ABAJO: S o flecha abajo
-    else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Down))
+
+    // Movimiento hacia abajo.
+    else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S) ||
+             sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Down))
     {
         dy = _velocidad * dt;
         _fila = 3;
         enMovimiento = true;
     }
-    // IZQUIERDA: A o flecha izquierda
-    else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Left))
+
+    // Movimiento hacia la izquierda.
+    else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A) ||
+             sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Left))
     {
         dx = -_velocidad * dt;
         _fila = 2;
         enMovimiento = true;
     }
-    // DERECHA: D o flecha derecha
-    else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Right))
+
+    // Movimiento hacia la derecha.
+    else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D) ||
+             sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Right))
     {
         dx = _velocidad * dt;
         _fila = 0;
         enMovimiento = true;
     }
 
-    /*    limitarMovimiento(); */
 
-
-    // Filtramos la posición: Solo se aplican dx e dy si caen en zona blanca
+    // Posición actual del personaje.
     float x = _sprite.getPosition().x;
     float y = _sprite.getPosition().y;
 
-     // Movimiento horizontal
+
+    // Movimiento horizontal.
     if (dx != 0.f && puedePisar(x + dx, y, partida))
     {
-        _sprite.setPosition({x + dx, y});
         x += dx;
     }
 
-    // Movimiento vertical
+
+    // Movimiento vertical.
     if (dy != 0.f && puedePisar(x, y + dy, partida))
     {
-        _sprite.setPosition({x, y + dy});
         y += dy;
     }
 
-    // Aplicar la posición definitiva
+
+    // Aplicar la posición definitiva.
     _sprite.setPosition({x, y});
 
-    // Animación
+
+    // Actualización de la animación.
     if (enMovimiento)
     {
         _contador += dt;
@@ -156,33 +233,48 @@ void Personaje::caminar(const Partida& partida)
         _contador = 0.f;
     }
 
-    // Colisión con el auto (en el lugar original)
-    //sf::Sprite spriteAuto = partida.getposicion_auto();
-    sf::Sprite spriteAuto = partida.getposicion_auto();
 
-    /*if (partida.colisionConMaterial1(_sprite,spriteAuto,))
-    {
-        std::cout << "¡¡¡ COLISIÓN DETECTADA !!!" << std::endl;
-        _sprite.setPosition(posicionAnterior);
-    }*/
-
-
-    if (partida.colisionConMaterial1(_sprite, spriteAuto))
-    {
-        std::cout << "¡¡¡ COLISIÓN DETECTADA !!!" << std::endl;
-        _sprite.setPosition(posicionAnterior);
-    }
-
- std::cout << "Personaje en: " << _sprite.getPosition().x << ", " << _sprite.getPosition().y << std::endl;
-std::cout << "Auto en: " << spriteAuto.getPosition().x << ", " << spriteAuto.getPosition().y << std::endl;
-
-
+    // Actualización del cuadro de animación.
     _columna = _frameActual;
-    _sprite.setTextureRect(sf::IntRect({_columna * _ancho, _fila * _alto}, {_ancho, _alto}));
+
+    _sprite.setTextureRect(sf::IntRect(
+        {_columna * _ancho, _fila * _alto},
+        {_ancho, _alto}
+    ));
 }
 
 
-sf::FloatRect Personaje::getBounds()const
+/*-----------------------------------------------------
+                         ANIMACIÓN
+-----------------------------------------------------*/
+
+void Personaje::setFila(int fila)
+{
+    _fila = fila;
+}
+
+
+/*-----------------------------------------------------
+                         INVENTARIO
+-----------------------------------------------------*/
+
+bool Personaje::agregarObjeto(int idObjeto)
+{
+    return _inventario.agregarObjeto(idObjeto);
+}
+
+
+bool Personaje::tieneObjeto(int idObjeto) const
+{
+    return _inventario.tieneObjeto(idObjeto);
+}
+
+
+/*-----------------------------------------------------
+                    CONSULTAS Y DIBUJADO
+-----------------------------------------------------*/
+
+sf::FloatRect Personaje::getBounds() const
 {
     return _sprite.getGlobalBounds();
 }
@@ -191,4 +283,5 @@ sf::FloatRect Personaje::getBounds()const
 void Personaje::dibujar()
 {
     _ventana.draw(_sprite);
+    _inventario.dibujar();
 }
